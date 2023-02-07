@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Set the source and destination EC2 instances
+SOURCE_INSTANCE_ID=<SOURCE_INSTANCE_ID>
+DESTINATION_INSTANCE_ID=<DESTINATION_INSTANCE_ID>
+
+# Get the public IP address of the source instance
+SOURCE_IP=$(aws ec2 describe-instances \
+  --instance-ids $SOURCE_INSTANCE_ID \
+  --query 'Reservations[].Instances[].PublicIpAddress' \
+  --output text)
+
+# Get the public IP address of the destination instance
+DESTINATION_IP=$(aws ec2 describe-instances \
+  --instance-ids $DESTINATION_INSTANCE_ID \
+  --query 'Reservations[].Instances[].PublicIpAddress' \
+  --output text)
+
+# Connect to the source instance and create a tar archive of the data
+ssh -i <KEY_FILE>.pem ec2-user@$SOURCE_IP << EOF
+  sudo tar -cvf backup.tar /path/to/data
+EOF
+
+# Copy the tar archive from the source instance to the destination instance
+scp -i <KEY_FILE>.pem ec2-user@$SOURCE_IP:/home/ec2-user/backup.tar .
+
+# Connect to the destination instance and extract the data
+ssh -i <KEY_FILE>.pem ec2-user@$DESTINATION_IP << EOF
+  sudo tar -xvf backup.tar -C /path/to/destination
+EOF
